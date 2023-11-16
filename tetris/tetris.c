@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-#include <conio.h>
 #include <windows.h>
+#include <conio.h>
 
 #define WIDTH 10
 #define HEIGHT 20
@@ -11,6 +11,7 @@
 #define WIDTH_BORDER (WIDTH + BORDER * 2)
 #define HEIGHT_BORDER (HEIGHT + BORDER + PRELOAD)
 #define SCORE_PER_LINE 10
+#define ACTION_PER_FRAME 3
 
 #define RANDINT(min, max) (rand() % (max - min + 1) + min)
 
@@ -60,6 +61,7 @@ int shapes[7][4][4][2] = {
 };
 
 int board[HEIGHT_BORDER][WIDTH_BORDER] = {0};
+int buffer[HEIGHT_BORDER][WIDTH_BORDER] = {0};
 
 typedef enum {
     LEFT, RIGHT, DOWN, UP, ROTATE_CLOCKWISE, ROTATE_COUNTER_CLOCKWISE, DROP
@@ -89,17 +91,17 @@ int checkCollision();
 
 int deleteLine();
 
-void showBoard();
+void printColorBlock(int color);
 
-void showKIMIN();
+void showBoard();
 
 void gameLoop(int interval);
 
 int main(int argc, char *argv[]) {
     srand((unsigned) time(NULL));
-    initBoard();
     initTetromino();
-    showKIMIN();
+    initBoard();
+
     switch (argc) {
         case 1:
             gameLoop(200);
@@ -108,7 +110,7 @@ int main(int argc, char *argv[]) {
             if (argv[1][0] == '-') {
                 switch (argv[1][1]) {
                     case 'e':
-                        gameLoop(500);
+                        gameLoop(300);
                         break;
                     case 'n':
                         gameLoop(200);
@@ -143,11 +145,26 @@ int main(int argc, char *argv[]) {
 }
 
 void initBoard() {
+    system("cls");
+    printf("\033[47m\033[36m+-+ +-+ +-+ +--+    +--+ +-+ +--+  +-+\n");
+    printf("| |/ /  | | |   \\  /   | | | |   \\ | |\n");
+    printf("|   |   | | | |\\ \\/ /| | | | | |\\ \\| |\n");
+    printf("| |\\ \\  | | | | \\  / | | | | | | \\   |\n");
+    printf("+-+ +-+ +-+ +-+  ++  +-+ +-+ +-+  +--+\033[0m\033[40m\n");
+    system("pause");
+
+    system("cls");
     for (int i = 0; i < HEIGHT_BORDER; ++i) {
         board[i][0] = board[i][WIDTH_BORDER - 1] = -1;
     }
     for (int i = 1; i < WIDTH_BORDER - 1; ++i) {
         board[HEIGHT_BORDER - 1][i] = -1;
+    }
+    for (int i = PRELOAD; i < HEIGHT_BORDER; ++i) {
+        for (int j = 0; j < WIDTH_BORDER; ++j) {
+            printColorBlock(board[i][j]);
+        }
+        printf("\n");
     }
 }
 
@@ -231,7 +248,7 @@ int deleteLine() {
             }
         }
         if (full) {
-            count++;
+            ++count;
             for (int j = i; j > 0; --j) {
                 for (int k = 1; k < WIDTH_BORDER - 1; ++k) {
                     board[j][k] = board[j - 1][k];
@@ -240,101 +257,104 @@ int deleteLine() {
             for (int j = 1; j < WIDTH_BORDER - 1; ++j) {
                 board[0][j] = 0;
             }
-            i++;
+            ++i;
         }
     }
     return count;
 }
 
-void showBoard() {
-    system("cls");
-    for (int i = PRELOAD; i < HEIGHT_BORDER; ++i) {
-        for (int j = 0; j < WIDTH_BORDER; ++j) {
-            switch (board[i][j]) {
-                case -1:
-                    printf("\033[47m  \033[0m");
-                    break;
-                case 0:
-                    printf("\033[40m  \033[0m");
-                    break;
-                case 1:
-                    printf("\033[41m  \033[0m");
-                    break;
-                case 2:
-                    printf("\033[42m  \033[0m");
-                    break;
-                case 3:
-                    printf("\033[43m  \033[0m");
-                    break;
-                case 4:
-                    printf("\033[44m  \033[0m");
-                    break;
-                case 5:
-                    printf("\033[45m  \033[0m");
-                    break;
-                case 6:
-                    printf("\033[46m  \033[0m");
-                    break;
-                default:
-                    break;
-            }
-        }
-        printf("\n");
+void printColorBlock(int color) {
+    switch (color) {
+        case -1:
+            printf("\033[47m  \033[0m");
+            break;
+        case 0:
+            printf("  ");
+            break;
+        case 1:
+            printf("\033[41m  \033[0m");
+            break;
+        case 2:
+            printf("\033[42m  \033[0m");
+            break;
+        case 3:
+            printf("\033[43m  \033[0m");
+            break;
+        case 4:
+            printf("\033[44m  \033[0m");
+            break;
+        case 5:
+            printf("\033[45m  \033[0m");
+            break;
+        case 6:
+            printf("\033[46m  \033[0m");
+            break;
+        default:
+            break;
     }
 }
 
-void showKIMIN() {
-    printf("\033[47m\033[36m+-+ +-+ +-+ +--+    +--+ +-+ +--+  +-+\n");
-    printf("| |/ /  | | |   \\  /   | | | |   \\ | |\n");
-    printf("|   |   | | | |\\ \\/ /| | | | | |\\ \\| |\n");
-    printf("| |\\ \\  | | | | \\  / | | | | | | \\   |\n");
-    printf("+-+ +-+ +-+ +-+  ++  +-+ +-+ +-+  +--+\033[40m\033[0m\n");
-    system("pause");
+void showBoard() {
+    for (int i = PRELOAD; i < HEIGHT_BORDER; ++i) {
+        for (int j = 0; j < WIDTH_BORDER; ++j) {
+            if (board[i][j] != buffer[i][j]) {
+                printf("\033[%d;%dH", i - PRELOAD + 1, j * 2 + 1);
+                buffer[i][j] = board[i][j];
+                printColorBlock(board[i][j]);
+            }
+        }
+    }
+}
+
+void getAction() {
+    if (kbhit()) {
+        clearTetromino();
+        switch (getch()) {
+            case 'a':
+                move(LEFT);
+                if (checkCollision()) {
+                    move(RIGHT);
+                }
+                break;
+            case 'd':
+                move(RIGHT);
+                if (checkCollision()) {
+                    move(LEFT);
+                }
+                break;
+            case 's':
+                move(DROP);
+                if (checkCollision()) {
+                    move(UP);
+                }
+                break;
+            case 'w':
+                move(ROTATE_CLOCKWISE);
+                if (checkCollision()) {
+                    move(ROTATE_COUNTER_CLOCKWISE);
+                }
+                break;
+            case 'p':
+                printf("Game Paused! Press p to continue...\n");
+                while (1) {
+                    if (getch() == 'p') {
+                        break;
+                    }
+                }
+                break;
+            default:
+                break;
+        }
+        drawTetromino();
+        showBoard();
+    }
 }
 
 void gameLoop(int interval) {
     int score = 0;
     while (1) {
-        if (kbhit()) {
-            clearTetromino();
-            switch (getch()) {
-                case 'a':
-                    move(LEFT);
-                    if (checkCollision()) {
-                        move(RIGHT);
-                    }
-                    break;
-                case 'd':
-                    move(RIGHT);
-                    if (checkCollision()) {
-                        move(LEFT);
-                    }
-                    break;
-                case 's':
-                    move(DROP);
-                    if (checkCollision()) {
-                        move(UP);
-                    }
-                    break;
-                case 'w':
-                    move(ROTATE_CLOCKWISE);
-                    if (checkCollision()) {
-                        move(ROTATE_COUNTER_CLOCKWISE);
-                    }
-                    break;
-                case 'p':
-                    printf("Game Paused! Press p to continue...\n");
-                    while (1) {
-                        if (getch() == 'p') {
-                            break;
-                        }
-                    }
-                    break;
-                default:
-                    break;
-            }
-            drawTetromino();
-            showBoard();
+        for (int i = 0; i < ACTION_PER_FRAME; ++i) {
+            getAction();
         }
         clearTetromino();
         move(DOWN);
@@ -343,6 +363,7 @@ void gameLoop(int interval) {
             drawTetromino();
             score += deleteLine() * SCORE_PER_LINE;
             if (t.y < PRELOAD) {
+                printf("\033[%d;1H", HEIGHT_BORDER - 1);
                 printf("Game Over!\nYour score is %d!\n", score);
                 break;
             }
