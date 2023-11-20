@@ -1,17 +1,52 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-#include <windows.h>
-#include <conio.h>
 
-#define WIDTH 10
-#define HEIGHT 20
+#if defined(_WIN32) || defined(_WIN64)
+
+#include <conio.h>
+#include <windows.h>
+
+#define CLEAR_SCREEN "cls"
+#else
+#include <unistd.h>
+#include <termios.h>
+#define CLEAR_SCREEN "clear"
+int kbhit() {
+    struct termios oldt, newt;
+    int ch;
+    int oldf;
+
+    tcgetattr(STDIN_FILENO, &oldt);
+    newt = oldt;
+    newt.c_lflag &= ~(ICANON | ECHO);
+    tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+    oldf = fcntl(STDIN_FILENO, F_GETFL, 0);
+    fcntl(STDIN_FILENO, F_SETFL, oldf | O_NONBLOCK);
+
+    ch = getchar();
+
+    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+    fcntl(STDIN_FILENO, F_SETFL, oldf);
+
+    if(ch != EOF) {
+        ungetc(ch, stdin);
+        return 1;
+    }
+
+    return 0;
+}
+#endif
+
+#define BOARD_WIDTH 10
+#define BOARD_HEIGHT 20
 #define BORDER 1
 #define PRELOAD 4
-#define WIDTH_BORDER (WIDTH + BORDER * 2)
-#define HEIGHT_BORDER (HEIGHT + BORDER + PRELOAD)
+#define WIDTH_BORDER (BOARD_WIDTH + BORDER * 2)
+#define HEIGHT_BORDER (BOARD_HEIGHT + BORDER + PRELOAD)
+#define STATUS_WIDTH 4
 #define SCORE_PER_LINE 10
-#define ACTION_PER_FRAME 3
+#define ACTION_PER_FRAME 4
 
 #define RANDINT(min, max) (rand() % (max - min + 1) + min)
 
@@ -63,6 +98,8 @@ int shapes[7][4][4][2] = {
 int board[HEIGHT_BORDER][WIDTH_BORDER] = {0};
 int buffer[HEIGHT_BORDER][WIDTH_BORDER] = {0};
 
+int status[BOARD_HEIGHT + BORDER][STATUS_WIDTH + BORDER] = {0};
+
 typedef enum {
     LEFT, RIGHT, DOWN, UP, ROTATE_CLOCKWISE, ROTATE_COUNTER_CLOCKWISE, DROP
 } Action;
@@ -75,7 +112,7 @@ typedef struct {
 
 Tetromino t;
 
-void initBoard();
+void initGameScreen();
 
 void initTetromino();
 
@@ -95,13 +132,14 @@ void printColorBlock(int color);
 
 void showBoard();
 
+void getAction();
+
 void gameLoop(int interval);
 
 int main(int argc, char *argv[]) {
     srand((unsigned) time(NULL));
+    initGameScreen();
     initTetromino();
-    initBoard();
-
     switch (argc) {
         case 1:
             gameLoop(200);
@@ -141,11 +179,12 @@ int main(int argc, char *argv[]) {
             gameLoop(200);
             break;
     }
+    printf("\033[%d;%dH\033[0m", BOARD_HEIGHT + BORDER + 1, 1);
     return 0;
 }
 
-void initBoard() {
-    system("cls");
+void initGameScreen() {
+    system(CLEAR_SCREEN);
     printf("\033[47m\033[36m+-+ +-+ +-+ +--+    +--+ +-+ +--+  +-+\n");
     printf("| |/ /  | | |   \\  /   | | | |   \\ | |\n");
     printf("|   |   | | | |\\ \\/ /| | | | | |\\ \\| |\n");
@@ -153,19 +192,36 @@ void initBoard() {
     printf("+-+ +-+ +-+ +-+  ++  +-+ +-+ +-+  +--+\033[0m\033[40m\n");
     system("pause");
 
-    system("cls");
+    system(CLEAR_SCREEN);
+
     for (int i = 0; i < HEIGHT_BORDER; ++i) {
         board[i][0] = board[i][WIDTH_BORDER - 1] = -1;
     }
     for (int i = 1; i < WIDTH_BORDER - 1; ++i) {
         board[HEIGHT_BORDER - 1][i] = -1;
     }
+
+    for (int i = 0; i < BOARD_HEIGHT + BORDER; ++i) {
+        status[i][STATUS_WIDTH + BORDER - 1] = -1;
+    }
+    for (int i = 0; i < STATUS_WIDTH + BORDER - 1; ++i) {
+        status[0][i] = status[BOARD_HEIGHT + BORDER - 1][i] = status[5][i] = -1;
+    }
+
     for (int i = PRELOAD; i < HEIGHT_BORDER; ++i) {
         for (int j = 0; j < WIDTH_BORDER; ++j) {
             printColorBlock(board[i][j]);
         }
+        for (int j = 0; j < STATUS_WIDTH + BORDER; ++j) {
+            printColorBlock(status[i - PRELOAD][j]);
+        }
         printf("\n");
     }
+
+    printf("\033[8;26H");
+    printf("SCORE:");
+    printf("\033[9;26H");
+    printf("0");
 }
 
 void initTetromino() {
@@ -175,6 +231,16 @@ void initTetromino() {
     t.x = RANDINT(BORDER, WIDTH_BORDER - BORDER - t.w);
     t.y = 0;
     t.color = RANDINT(1, 6);
+    for (int i = 0; i < 4; ++i) {
+        for (int j = 0; j < 4; ++j) {
+            printf("\033[%d;%dH  ", 2 + i, 25 + j * 2);
+        }
+    }
+
+    for (int i = 0; i < 4; ++i) {
+        printf("\033[%d;%dH", 2 + shapes[t.shape][t.rotation][i][0], 25 + shapes[t.shape][t.rotation][i][1] * 2);
+        printColorBlock(t.color);
+    }
 }
 
 int calcWidth() {
@@ -303,6 +369,7 @@ void showBoard() {
                 printColorBlock(board[i][j]);
             }
         }
+        printf("\033[%d;%dH", BOARD_HEIGHT + BORDER, 1);
     }
 }
 
@@ -335,9 +402,12 @@ void getAction() {
                 }
                 break;
             case 'p':
-                printf("Game Paused! Press p to continue...\n");
+                printf("\033[11;26H");
+                printf("PAUSED");
                 while (1) {
                     if (getch() == 'p') {
+                        printf("\033[11;26H");
+                        printf("      ");
                         break;
                     }
                 }
@@ -362,9 +432,15 @@ void gameLoop(int interval) {
             move(UP);
             drawTetromino();
             score += deleteLine() * SCORE_PER_LINE;
+            printf("\033[8;26H");
+            printf("SCORE:");
+            printf("\033[9;26H");
+            printf("%d", score);
             if (t.y < PRELOAD) {
-                printf("\033[%d;1H", HEIGHT_BORDER - 1);
-                printf("Game Over!\nYour score is %d!\n", score);
+                printf("\033[13;27H");
+                printf("\033[31mGAME");
+                printf("\033[14;27H");
+                printf("\033[31mOVER");
                 break;
             }
             initTetromino();
