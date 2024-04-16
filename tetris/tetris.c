@@ -33,7 +33,6 @@ int kbhit() {
         ungetc(ch, stdin);
         return 1;
     }
-
     return 0;
 }
 #endif
@@ -42,57 +41,58 @@ int kbhit() {
 #define BOARD_HEIGHT 20
 #define BORDER 1
 #define PRELOAD 4
+#define STATUS_WIDTH 4
 #define WIDTH_BORDER (BOARD_WIDTH + BORDER * 2)
 #define HEIGHT_BORDER (BOARD_HEIGHT + BORDER + PRELOAD)
-#define STATUS_WIDTH 4
+
 #define SCORE_PER_LINE 10
 #define ACTION_PER_FRAME 4
 
 #define RANDINT(min, max) (rand() % (max - min + 1) + min)
 
 int shapes[7][4][4][2] = {
-        {
-                {{0, 0}, {0, 1}, {0, 2}, {0, 3}},
-                {{0, 0}, {1, 0}, {2, 0}, {3, 0}},
-                {{0, 0}, {0, 1}, {0, 2}, {0, 3}},
-                {{0, 0}, {1, 0}, {2, 0}, {3, 0}},
-        },
-        {
-                {{0, 1}, {1, 1}, {2, 0}, {2, 1}},
-                {{0, 0}, {1, 0}, {1, 1}, {1, 2}},
-                {{0, 0}, {0, 1}, {1, 0}, {2, 0}},
-                {{0, 0}, {0, 1}, {0, 2}, {1, 2}},
-        },
-        {
-                {{0, 0}, {1, 0}, {2, 0}, {2, 1}},
-                {{0, 0}, {0, 1}, {0, 2}, {1, 0}},
-                {{0, 0}, {0, 1}, {1, 1}, {2, 1}},
-                {{0, 2}, {1, 0}, {1, 1}, {1, 2}},
-        },
-        {
-                {{0, 0}, {0, 1}, {1, 0}, {1, 1}},
-                {{0, 0}, {0, 1}, {1, 0}, {1, 1}},
-                {{0, 0}, {0, 1}, {1, 0}, {1, 1}},
-                {{0, 0}, {0, 1}, {1, 0}, {1, 1}},
-        },
-        {
-                {{0, 1}, {0, 2}, {1, 0}, {1, 1}},
-                {{0, 0}, {1, 0}, {1, 1}, {2, 1}},
-                {{0, 1}, {0, 2}, {1, 0}, {1, 1}},
-                {{0, 0}, {1, 0}, {1, 1}, {2, 1}},
-        },
-        {
-                {{0, 0}, {0, 1}, {0, 2}, {1, 1}},
-                {{0, 1}, {1, 0}, {1, 1}, {2, 1}},
-                {{0, 1}, {1, 0}, {1, 1}, {1, 2}},
-                {{0, 0}, {1, 0}, {1, 1}, {2, 0}},
-        },
-        {
-                {{0, 0}, {0, 1}, {1, 1}, {1, 2}},
-                {{0, 1}, {1, 0}, {1, 1}, {2, 0}},
-                {{0, 0}, {0, 1}, {1, 1}, {1, 2}},
-                {{0, 1}, {1, 0}, {1, 1}, {2, 0}},
-        },
+    {
+        {{0, 0}, {0, 1}, {0, 2}, {0, 3}},
+        {{0, 0}, {1, 0}, {2, 0}, {3, 0}},
+        {{0, 0}, {0, 1}, {0, 2}, {0, 3}},
+        {{0, 0}, {1, 0}, {2, 0}, {3, 0}},
+    },
+    {
+        {{0, 1}, {1, 1}, {2, 0}, {2, 1}},
+        {{0, 0}, {1, 0}, {1, 1}, {1, 2}},
+        {{0, 0}, {0, 1}, {1, 0}, {2, 0}},
+        {{0, 0}, {0, 1}, {0, 2}, {1, 2}},
+    },
+    {
+        {{0, 0}, {1, 0}, {2, 0}, {2, 1}},
+        {{0, 0}, {0, 1}, {0, 2}, {1, 0}},
+        {{0, 0}, {0, 1}, {1, 1}, {2, 1}},
+        {{0, 2}, {1, 0}, {1, 1}, {1, 2}},
+    },
+    {
+        {{0, 0}, {0, 1}, {1, 0}, {1, 1}},
+        {{0, 0}, {0, 1}, {1, 0}, {1, 1}},
+        {{0, 0}, {0, 1}, {1, 0}, {1, 1}},
+        {{0, 0}, {0, 1}, {1, 0}, {1, 1}},
+    },
+    {
+        {{0, 1}, {0, 2}, {1, 0}, {1, 1}},
+        {{0, 0}, {1, 0}, {1, 1}, {2, 1}},
+        {{0, 1}, {0, 2}, {1, 0}, {1, 1}},
+        {{0, 0}, {1, 0}, {1, 1}, {2, 1}},
+    },
+    {
+        {{0, 0}, {0, 1}, {0, 2}, {1, 1}},
+        {{0, 1}, {1, 0}, {1, 1}, {2, 1}},
+        {{0, 1}, {1, 0}, {1, 1}, {1, 2}},
+        {{0, 0}, {1, 0}, {1, 1}, {2, 0}},
+    },
+    {
+        {{0, 0}, {0, 1}, {1, 1}, {1, 2}},
+        {{0, 1}, {1, 0}, {1, 1}, {2, 0}},
+        {{0, 0}, {0, 1}, {1, 1}, {1, 2}},
+        {{0, 1}, {1, 0}, {1, 1}, {2, 0}},
+    },
 };
 
 int board[HEIGHT_BORDER][WIDTH_BORDER] = {0};
@@ -110,21 +110,23 @@ typedef struct {
     int color;
 } Tetromino;
 
-Tetromino t;
+void showKIMIN();
 
 void initGameScreen();
 
-void initTetromino();
+void initTetromino(Tetromino* t);
 
-int calcWidth();
+void showNextTetromino(Tetromino* t);
 
-void move(Action a);
+int calcWidth(Tetromino* t);
 
-void clearTetromino();
+void move(Tetromino* t, Action a);
 
-void drawTetromino();
+void clearTetromino(Tetromino* t);
 
-int checkCollision();
+void drawTetromino(Tetromino* t);
+
+int checkCollision(Tetromino* t);
 
 int deleteLine();
 
@@ -132,14 +134,14 @@ void printColorBlock(int color);
 
 void showBoard();
 
-void getAction();
+void responseAction(Tetromino* t);
 
 void gameLoop(int interval);
 
-int main(int argc, char *argv[]) {
-    srand((unsigned) time(NULL));
+int main(int argc, char* argv[]) {
+    srand(time(NULL));
     initGameScreen();
-    initTetromino();
+
     switch (argc) {
         case 1:
             gameLoop(200);
@@ -183,7 +185,7 @@ int main(int argc, char *argv[]) {
     return 0;
 }
 
-void initGameScreen() {
+void showKIMIN() {
     system(CLEAR_SCREEN);
     printf("\033[47m\033[36m+-+ +-+ +-+ +--+    +--+ +-+ +--+  +-+\n");
     printf("| |/ /  | | |   \\  /   | | | |   \\ | |\n");
@@ -191,7 +193,10 @@ void initGameScreen() {
     printf("| |\\ \\  | | | | \\  / | | | | | | \\   |\n");
     printf("+-+ +-+ +-+ +-+  ++  +-+ +-+ +-+  +--+\033[0m\033[40m\n");
     system("pause");
+}
 
+void initGameScreen() {
+    showKIMIN();
     system(CLEAR_SCREEN);
 
     for (int i = 0; i < HEIGHT_BORDER; ++i) {
@@ -224,79 +229,83 @@ void initGameScreen() {
     printf("0");
 }
 
-void initTetromino() {
-    t.shape = RANDINT(0, 6);
-    t.rotation = RANDINT(0, 3);
-    t.w = calcWidth();
-    t.x = RANDINT(BORDER, WIDTH_BORDER - BORDER - t.w);
-    t.y = 0;
-    t.color = RANDINT(1, 6);
+void showNextTetromino(Tetromino* t) {
     for (int i = 0; i < 4; ++i) {
         for (int j = 0; j < 4; ++j) {
             printf("\033[%d;%dH  ", 2 + i, 25 + j * 2);
         }
     }
-
     for (int i = 0; i < 4; ++i) {
-        printf("\033[%d;%dH", 2 + shapes[t.shape][t.rotation][i][0], 25 + shapes[t.shape][t.rotation][i][1] * 2);
-        printColorBlock(t.color);
+        printf("\033[%d;%dH",
+               2 + shapes[t->shape][t->rotation][i][0], 25 + shapes[t->shape][t->rotation][i][1] * 2);
+        printColorBlock(t->color);
     }
 }
 
-int calcWidth() {
+void initTetromino(Tetromino* t) {
+    t->shape = RANDINT(0, 6);
+    t->rotation = RANDINT(0, 3);
+    t->w = calcWidth(t);
+    t->x = RANDINT(BORDER, WIDTH_BORDER - BORDER - t->w);
+    t->y = 0;
+    t->color = RANDINT(1, 6);
+    showNextTetromino(t);
+}
+
+int calcWidth(Tetromino* t) {
     int w = 0;
     for (int i = 0; i < 4; ++i) {
-        w = max(w, shapes[t.shape][t.rotation][i][1] + 1);
+        w = max(w, shapes[t->shape][t->rotation][i][1] + 1);
     }
     return w;
 }
 
-void move(Action a) {
+void move(Tetromino* t, Action a) {
     switch (a) {
         case LEFT:
-            t.x--;
+            t->x--;
             break;
         case RIGHT:
-            t.x++;
+            t->x++;
             break;
         case DOWN:
-            t.y++;
+            t->y++;
             break;
         case UP:
-            t.y--;
+            t->y--;
             break;
         case ROTATE_CLOCKWISE:
-            t.rotation = (t.rotation + 1) % 4;
+            t->rotation = (t->rotation + 1) % 4;
             break;
         case ROTATE_COUNTER_CLOCKWISE:
-            t.rotation = (t.rotation + 3) % 4;
+            t->rotation = (t->rotation + 3) % 4;
             break;
         case DROP:
-            while (!checkCollision()) {
-                t.y++;
+            while (!checkCollision(t)) {
+                t->y++;
             }
-            t.y--;
+            t->y--;
             break;
         default:
             break;
     }
 }
 
-void clearTetromino() {
+void clearTetromino(Tetromino* t) {
     for (int i = 0; i < 4; ++i) {
-        board[t.y + shapes[t.shape][t.rotation][i][0]][t.x + shapes[t.shape][t.rotation][i][1]] = 0;
+        board[t->y + shapes[t->shape][t->rotation][i][0]][t->x + shapes[t->shape][t->rotation][i][1]] = 0;
     }
 }
 
-void drawTetromino() {
+void drawTetromino(Tetromino* t) {
     for (int i = 0; i < 4; ++i) {
-        board[t.y + shapes[t.shape][t.rotation][i][0]][t.x + shapes[t.shape][t.rotation][i][1]] = t.color;
+        board[t->y + shapes[t->shape][t->rotation][i][0]][t->x + shapes[t->shape][t->rotation][i][1]] = t->color;
     }
 }
 
-int checkCollision() {
+int checkCollision(Tetromino* t) {
     for (int i = 0; i < 4; ++i) {
-        if (board[t.y + shapes[t.shape][t.rotation][i][0]][t.x + shapes[t.shape][t.rotation][i][1]]) {
+        if (board[t->y + shapes[t->shape][t->rotation][i][0]][t->x + shapes[t->shape][t->rotation][i][1]]) {
             return 1;
         }
     }
@@ -364,8 +373,9 @@ void showBoard() {
     for (int i = PRELOAD; i < HEIGHT_BORDER; ++i) {
         for (int j = 0; j < WIDTH_BORDER; ++j) {
             if (board[i][j] != buffer[i][j]) {
-                printf("\033[%d;%dH", i - PRELOAD + 1, j * 2 + 1);
                 buffer[i][j] = board[i][j];
+
+                printf("\033[%d;%dH", i - PRELOAD + 1, j * 2 + 1); // move cursor
                 printColorBlock(board[i][j]);
             }
         }
@@ -373,32 +383,32 @@ void showBoard() {
     }
 }
 
-void getAction() {
+void responseAction(Tetromino* t) {
     if (kbhit()) {
-        clearTetromino();
+        clearTetromino(t);
         switch (getch()) {
             case 'a':
-                move(LEFT);
-                if (checkCollision()) {
-                    move(RIGHT);
+                move(t, LEFT);
+                if (checkCollision(t)) {
+                    move(t, RIGHT);
                 }
                 break;
             case 'd':
-                move(RIGHT);
-                if (checkCollision()) {
-                    move(LEFT);
+                move(t, RIGHT);
+                if (checkCollision(t)) {
+                    move(t, LEFT);
                 }
                 break;
             case 's':
-                move(DROP);
-                if (checkCollision()) {
-                    move(UP);
+                move(t, DROP);
+                if (checkCollision(t)) {
+                    move(t, UP);
                 }
                 break;
             case 'w':
-                move(ROTATE_CLOCKWISE);
-                if (checkCollision()) {
-                    move(ROTATE_COUNTER_CLOCKWISE);
+                move(t, ROTATE_CLOCKWISE);
+                if (checkCollision(t)) {
+                    move(t, ROTATE_COUNTER_CLOCKWISE);
                 }
                 break;
             case 'p':
@@ -415,37 +425,47 @@ void getAction() {
             default:
                 break;
         }
-        drawTetromino();
+        drawTetromino(t);
         showBoard();
     }
 }
 
 void gameLoop(int interval) {
     int score = 0;
+    Tetromino cur;
+    Tetromino nxt;
+    initTetromino(&nxt);
+    cur = nxt;
+
     while (1) {
         for (int i = 0; i < ACTION_PER_FRAME; ++i) {
-            getAction();
+            responseAction(&cur);
         }
-        clearTetromino();
-        move(DOWN);
-        if (checkCollision()) {
-            move(UP);
-            drawTetromino();
+        clearTetromino(&cur);
+        move(&cur, DOWN);
+        if (cur.y == PRELOAD - 1) {
+            initTetromino(&nxt);
+            showNextTetromino(&nxt);
+        }
+
+        if (checkCollision(&cur)) {
+            move(&cur, UP);
+            drawTetromino(&cur);
             score += deleteLine() * SCORE_PER_LINE;
             printf("\033[8;26H");
             printf("SCORE:");
             printf("\033[9;26H");
             printf("%d", score);
-            if (t.y < PRELOAD) {
+            if (cur.y < PRELOAD) {
                 printf("\033[13;27H");
                 printf("\033[31mGAME");
                 printf("\033[14;27H");
                 printf("\033[31mOVER");
                 break;
             }
-            initTetromino();
+            cur = nxt;
         }
-        drawTetromino();
+        drawTetromino(&cur);
         showBoard();
         Sleep(interval);
     }
